@@ -71,7 +71,7 @@ Resources:
     Type: "AWS::EC2::Instance"
     Properties:
       InstanceType: "t2.micro" # Tipo da instância (baixo custo)
-      KeyName: "my-key-pair" # Nome do par de chaves (deve existir previamente)
+      KeyName: "vockey" # Nome do par de chaves (deve existir previamente e foi criada ao iniciar o Lab guiado do Modulo 10)
       ImageId: "ami-0c94855ba95c71c99" # ID da imagem (AMI) para Amazon Linux 2
       NetworkInterfaces:
         - AssociatePublicIpAddress: true # Atribui um IP público
@@ -91,7 +91,7 @@ Resources:
 Outputs:
   # ID da instância EC2
   InstanceID:
-    Description: "ID da instância EC2"
+    Description: "ID da instancia EC2"
     Value: !Ref MyEC2Instance
 
   # ID do VPC
