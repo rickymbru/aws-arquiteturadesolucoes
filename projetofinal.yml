@@ -1,0 +1,105 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Template para criar uma infraestrutura com VPC, Subnet pública, Internet Gateway, EC2 e Security Group.
+
+Resources:
+  # Criação da VPC
+  MyVPC:
+    Type: "AWS::EC2::VPC"
+    Properties:
+      CidrBlock: "10.0.0.0/16" # Intervalo de endereços IP para a VPC
+      EnableDnsSupport: true # Habilita suporte a DNS
+      EnableDnsHostnames: true # Permite resolução de nomes DNS
+      Tags:
+        - Key: "Name"
+          Value: "MyVPC"
+
+  # Subnet Pública
+  PublicSubnet:
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      VpcId: !Ref MyVPC # Associa a subnet à VPC criada
+      CidrBlock: "10.0.1.0/24" # Intervalo de IPs para a subnet
+      MapPublicIpOnLaunch: true # Garante que instâncias recebam IP público automaticamente
+      AvailabilityZone: !Select [0, !GetAZs ""] # Seleciona a primeira zona de disponibilidade
+
+  # Internet Gateway para acesso externo
+  InternetGateway:
+    Type: "AWS::EC2::InternetGateway"
+
+  # Associação do Internet Gateway ao VPC
+  VPCGatewayAttachment:
+    Type: "AWS::EC2::VPCGatewayAttachment"
+    Properties:
+      VpcId: !Ref MyVPC
+      InternetGatewayId: !Ref InternetGateway
+
+  # Tabela de Rotas para definir rotas da VPC
+  PublicRouteTable:
+    Type: "AWS::EC2::RouteTable"
+    Properties:
+      VpcId: !Ref MyVPC
+
+  # Rota Default para o Internet Gateway
+  DefaultRoute:
+    Type: "AWS::EC2::Route"
+    Properties:
+      RouteTableId: !Ref PublicRouteTable # Associação com a tabela de rotas
+      DestinationCidrBlock: "0.0.0.0/0" # Direciona todo o tráfego externo
+      GatewayId: !Ref InternetGateway
+
+  # Associação da Subnet Pública à Tabela de Rotas
+  SubnetRouteTableAssociation:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      SubnetId: !Ref PublicSubnet
+      RouteTableId: !Ref PublicRouteTable
+
+  # Security Group para permitir HTTP
+  MySecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: "Permitir acesso HTTP"
+      VpcId: !Ref MyVPC
+      SecurityGroupIngress:
+        - IpProtocol: "tcp" # Protocolo TCP
+          FromPort: 80 # Porta de origem (HTTP)
+          ToPort: 80 # Porta de destino (HTTP)
+          CidrIp: "0.0.0.0/0" # Permite tráfego de qualquer IP
+
+  # Instância EC2
+  MyEC2Instance:
+    Type: "AWS::EC2::Instance"
+    Properties:
+      InstanceType: "t2.micro" # Tipo da instância (baixo custo)
+      KeyName: "my-key-pair" # Nome do par de chaves (deve existir previamente)
+      ImageId: "ami-0c94855ba95c71c99" # ID da imagem (AMI) para Amazon Linux 2
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true # Atribui um IP público
+          DeviceIndex: 0
+          SubnetId: !Ref PublicSubnet # Associação com a subnet pública
+          GroupSet:
+            - !Ref MySecurityGroup # Associação com o Security Group
+      UserData:
+        Fn::Base64: !Sub | # Script de inicialização para configurar a instância
+          #!/bin/bash
+          yum update -y
+          yum install -y httpd
+          systemctl start httpd
+          systemctl enable httpd
+          echo "Hello, World from EC2 Instance!" > /var/www/html/index.html
+
+Outputs:
+  # ID da instância EC2
+  InstanceID:
+    Description: "ID da instância EC2"
+    Value: !Ref MyEC2Instance
+
+  # ID do VPC
+  VPCID:
+    Description: "ID do VPC criado"
+    Value: !Ref MyVPC
+
+  # ID do Security Group
+  SecurityGroupID:
+    Description: "ID do Security Group"
+    Value: !Ref MySecurityGroup
