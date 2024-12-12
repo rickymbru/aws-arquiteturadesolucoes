@@ -86,7 +86,7 @@ Resources:
           yum install -y httpd
           systemctl start httpd
           systemctl enable httpd
-          echo "Hello, World from EC2 Instance!" > /var/www/html/index.html
+          echo "Pagina de Teste para o Projeto Final da materia: Arquitetura de Soluções na Amazon AWS [24E4_3] " > /var/www/html/index.html
 
 Outputs:
   # ID da instância EC2
